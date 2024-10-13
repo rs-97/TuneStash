@@ -1,0 +1,32 @@
+/*Chrome*/
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+
+    input[type='range'] {
+      overflow: hidden;
+      width: 80px;
+      height: 0.4rem;
+      margin-top: 0.4rem;
+      -webkit-appearance: none;
+      background-color: rgba(255,255,255,0.3);
+      border-radius: 2rem;
+    }
+    
+    input[type='range']::-webkit-slider-runnable-track {
+      height: 10px;
+      -webkit-appearance: none;
+      color: #13bba4;
+      margin-top: -1px;
+    }
+    
+    input[type='range']::-webkit-slider-thumb {
+      width: 0.6rem;
+      -webkit-appearance: none;
+      height: 0.6rem;
+      cursor: pointer;
+      background: white;
+      border-radius: 50%;
+      scale: 1.0;
+      box-shadow: -10rem 0 0 10rem white;
+    }
+
+}
