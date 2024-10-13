@@ -8,23 +8,19 @@ import InputField from "./components/InputField.tsx";
 
 import { SpotifyPlaylist, SpotifySong } from "./types.tsx";
 
-// let SP_CLIENT_ID : string = "";
-// let SP_CLIENT_SECRET : string = "";
-// let YT_API_KEY = "";
-
-const SP_CLIENT_ID : string = "c9c34bead9694ed3bcb8bb82124a01a2";
-const SP_CLIENT_SECRET : string = "3563a07cc8834b90ba0d18ad284f8124";
-const YT_API_KEY = "AIzaSyBO-xor3lixZS4OZMPRSmtTbkt7__PLEi4";
+let SP_CLIENT_ID : string = "";
+let SP_CLIENT_SECRET : string = "";
+let YT_API_KEY = "";
 
 const SONG_AUDIO = new Audio();
 
 const loadBaseConfig = async () =>
 {
-	// const config_data = await window.electronAPI.loadConfig();
-	// const config = JSON.parse(config_data)
-	// SP_CLIENT_ID = config["SP_ID"];
-	// SP_CLIENT_SECRET = config["SP_SECRET"];
-	// YT_API_KEY = config["YT_KEY"];
+	const config_data = await window.electronAPI.loadConfig();
+	const config = JSON.parse(config_data)
+	SP_CLIENT_ID = config["SP_ID"];
+	SP_CLIENT_SECRET = config["SP_SECRET"];
+	YT_API_KEY = config["YT_KEY"];
 }
 
 window.onload = async () =>
