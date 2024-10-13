@@ -2,11 +2,9 @@ import IconPlay from "../assets/play.svg";
 import IconShuffle from "../assets/shuffle.svg";
 import IconTrash from "../assets/trash.svg";
 import IconRefresh from "../assets/refresh.svg";
-
 import SongList from "./SongList.tsx";
 
-import { SpotifyPlaylist, SpotifySong } from "../types.tsx";
-import { useEffect, useState } from "react";
+import { SpotifyPlaylist } from "../types.tsx";
 
 interface ActionsHeaderButtonOptions
 {
@@ -30,9 +28,8 @@ interface ActionsHeaderOptions
 
 interface OverviewOptions
 {
-    playlists : SpotifyPlaylist[],
-    playlistIndex : number,
-    setSong : Function
+    playlist : SpotifyPlaylist | undefined,
+    setSongId : React.Dispatch<React.SetStateAction<string | undefined>>,
 }
 
 const OverviewHeader : React.FC<OverviewHeaderOptions> = ({ visible, name, count, art, time }) =>
@@ -85,21 +82,12 @@ const ActionsHeader : React.FC<ActionsHeaderOptions> = ({ visible }) =>
     )
 }
 
-const Overview : React.FC<OverviewOptions> = ({ playlists, playlistIndex, setSong }) =>
+const Overview : React.FC<OverviewOptions> = ({ playlist, setSongId }) =>
 {
-    const [playlist, setPlaylist] = useState({});
-
-    useEffect(() =>
+    if (playlist == undefined)
     {
-        if (playlistIndex == -1)
-        {
-            setPlaylist({});
-        }
-        else
-        {
-            setPlaylist(playlists[playlistIndex]);
-        }
-    }, [playlistIndex])
+        return (<></>)
+    }
 
     return (
         <div className="flex flex-1 h-full p-2 pl-1 pb-0">
@@ -110,7 +98,7 @@ const Overview : React.FC<OverviewOptions> = ({ playlists, playlistIndex, setSon
                         visible={playlist.name != null}
                         name={playlist.name}
                         art={playlist.art}
-                        count={playlist.songs != null ? playlist.songs.length : {}}
+                        count={playlist.songs != null ? playlist.songs.length : 0}
                     />
                     <ActionsHeader
                         visible={playlist.name != null}
@@ -118,7 +106,7 @@ const Overview : React.FC<OverviewOptions> = ({ playlists, playlistIndex, setSon
                     <SongList
                         visible={playlist.name != null}
                         songs={playlist.songs}
-                        setSong={setSong}
+                        setSongId={setSongId}
                     />
                 </div>
             </div>

@@ -4,8 +4,7 @@ interface InputFieldOptions
 {
     active : boolean,
     setActive : React.Dispatch<React.SetStateAction<boolean>>,
-    onSubmit : Function,
-    onUpdate : Function
+    onSubmit : Function
 }
 
 interface ButtonOptions
@@ -36,7 +35,7 @@ const ResultText : React.FC<ResultTextOptions> = ({type}) =>
     )
 }
 
-const InputField : React.FC<InputFieldOptions> = ({ active, setActive, onSubmit, onUpdate }) =>
+const InputField : React.FC<InputFieldOptions> = ({ active, setActive, onSubmit }) =>
 {
     const [link, setLink] = useState("");
 
@@ -57,7 +56,6 @@ const InputField : React.FC<InputFieldOptions> = ({ active, setActive, onSubmit,
     function update(e)
     {
         setLink(e.target.value)
-        onUpdate(e.target.value);
     }
 
     if (active)

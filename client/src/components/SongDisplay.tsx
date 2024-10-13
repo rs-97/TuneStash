@@ -8,7 +8,7 @@ interface SongDisplayOptions
 const SongDisplay : React.FC<SongDisplayOptions> = ({ art, name, artist }) =>
 {
     return (
-        <div className="flex h-full min-w-[20rem] items-center">
+        <div className="flex h-full min-w-[18rem] items-center">
             <div className="flex h-full aspect-square overflow-hidden relative rounded-sm">
                 <img src={art} alt="album-art" className="absolute w-full h-full object-cover" />
             </div>

@@ -2,12 +2,12 @@ import MusicIcon from "../assets/music.svg";
 import PlusIcon from "../assets/plus.svg";
 import Playlist from "./Playlist.tsx";
 
-import { SpotifyPlaylist, SpotifySong } from "../types.tsx";
+import { SpotifyPlaylist } from "../types.tsx";
 
 interface PlaylistsOptions
 {
     playlists : SpotifyPlaylist[],
-    setPlaylist : React.Dispatch<React.SetStateAction<number>>,
+    setPlaylistId : React.Dispatch<React.SetStateAction<string | undefined>>,
     callback : React.MouseEventHandler<HTMLDivElement>
 }
 
@@ -38,12 +38,12 @@ const Title : React.FC<AddPlaylistOptions> = ({ callback }) =>
     )
 }
 
-const Playlists : React.FC<PlaylistsOptions> = ({ playlists, setPlaylist, callback }) =>
+const Playlists : React.FC<PlaylistsOptions> = ({ playlists, setPlaylistId, callback }) =>
 {
     const playlists_objs = playlists.map((pl, i) =>
     {
         return (
-            <Playlist name={pl.name} art={pl.art} onClick={() => { setPlaylist(i) }} />
+            <Playlist name={pl.name} art={pl.art} onClick={() => { setPlaylistId(pl.id) }} />
         )
     });
 

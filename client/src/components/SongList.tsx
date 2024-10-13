@@ -9,13 +9,15 @@ interface SongOptions
     name : string,
     artist : string,
     album : string,
-    length : number
+    length : number,
+    onClick : React.MouseEventHandler<HTMLTableRowElement>
 }
 
 interface SongListOptions
 {
     visible : boolean,
-    songs : SpotifySong[]
+    songs : SpotifySong[],
+    setSongId : React.Dispatch<React.SetStateAction<string | undefined>>
 }
 
 function format_seconds_to_timestamp(total_seconds: number)
@@ -30,7 +32,7 @@ const Song : React.FC<SongOptions> = ({ index, name, art, artist, album, length,
 {
     const [hover, setHover] = useState(false);
     const length_formatted : string = format_seconds_to_timestamp(length);
-    let logo = index;
+    let logo : number | Element = index;
 
     if (hover)
     {
@@ -66,7 +68,7 @@ const Song : React.FC<SongOptions> = ({ index, name, art, artist, album, length,
     )
 }
 
-const SongList : React.FC<SongListOptions> = ({ visible, songs, setSong }) =>
+const SongList : React.FC<SongListOptions> = ({ visible, songs, setSongId }) =>
 {
     if (!visible)
     {
@@ -77,7 +79,17 @@ const SongList : React.FC<SongListOptions> = ({ visible, songs, setSong }) =>
     {
         const artist = song.artists.join(", ");
         return (
-            <Song index={i + 1} name={song.name} artist={artist} album={song.album} length={Math.floor(song.duration / 1000)} art={song.art} onClick={()=>{setSong(i)}} />
+            <Song
+                index={i + 1}
+                name={song.name}
+                artist={artist}
+                album={song.album}
+                length={Math.floor(song.duration / 1000)}
+                art={song.art}
+                onClick={()=>{
+                    setSongId(song.id)
+                }}
+            />
         )
     });
 

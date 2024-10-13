@@ -8,13 +8,13 @@ import SongOptions from "./SongOptions.tsx";
 interface PlaybarOptions
 {
     visible : boolean,
-    song : SpotifySong,
+    song : SpotifySong | undefined,
     audio : HTMLAudioElement
 }
 
-const Playbar : React.FC<PlaybarOptions> = ({ visible, song, setSongIndex, audio }) =>
+const Playbar : React.FC<PlaybarOptions> = ({ visible, song, audio }) =>
 {
-    if (!visible || song == null || song.name == null)
+    if (!visible || song == undefined)
     {
         return (<></>)
     }
@@ -22,7 +22,7 @@ const Playbar : React.FC<PlaybarOptions> = ({ visible, song, setSongIndex, audio
     return (
         <div className="flex w-full h-[5rem] p-3 justify-between">
             <SongDisplay name={song.name} artist={song.artists.join(", ")} art={song.art} />
-            <SongBar audio={audio} setSongIndex={setSongIndex} />
+            <SongBar audio={audio} />
             <SongOptions audio={audio} />
         </div>
     )

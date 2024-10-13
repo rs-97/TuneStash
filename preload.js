@@ -2,8 +2,14 @@ const { contextBridge, ipcRenderer } = require('electron/renderer')
 
 contextBridge.exposeInMainWorld('electronAPI', {
     saveConfig: (config) => ipcRenderer.send("save-config", config),
-    loadConfig: () => ipcRenderer.invoke("load-config"),
-    savePlaylist: (data) => ipcRenderer.send("save-playlist", data),
-    loadPlaylists: (id) => ipcRenderer.invoke("load-playlists", id),
-    requestSong: (id) => ipcRenderer.invoke("request-song", id)
+    // loadConfig: () => ipcRenderer.invoke("load-config"),
+    
+    addPlaylist: (data) => ipcRenderer.send("save-playlist", data),
+    
+    requestSong: (id) => ipcRenderer.send("request-song", id),
+    requestPlaylists: () => ipcRenderer.send("request-playlists"),
+    
+    onUpdatePlaylists: (callback) => ipcRenderer.on("update-playlists", (_event, value) => callback(value)),
+    onUpdateSong: (callback) => ipcRenderer.on("update-song", (_event, value) => callback(value)),
+    
 });

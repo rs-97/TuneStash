@@ -1,12 +1,18 @@
 import "./SongBar.css";
 
-import PlayIcon from "../assets/play.svg"
+import IconPlay from "../assets/play.svg";
+import IconPause from "../assets/pause.svg";
+import IconForward from "../assets/forward.svg";
+import IconBack from "../assets/back.svg";
+
+
 import { useEffect, useState } from "react";
 
 interface ActionProps
 {
     filled : boolean,
-    children : React.ReactNode
+    icon : string,
+    onClick : React.MouseEventHandler<HTMLDivElement>
 }
 
 interface SongBarOptions
@@ -23,49 +29,11 @@ function format_seconds_to_timestamp(total_seconds: number)
     return `${minutes}:${seconds_formatted}`;
 }
 
-const IconPlay = ({ paused }) =>
-{
-    if (!paused)
-    {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
-                <path d="M48 64C21.5 64 0 85.5 0 112L0 400c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48L48 64zm192 0c-26.5 0-48 21.5-48 48l0 288c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48l-32 0z"/>
-            </svg>
-        )
-    }
-    else
-    {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
-                <path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80L0 432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/>
-            </svg>
-        )
-    }
-}
-
-const IconFoward = () =>
-{
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
-            <path fill="white" d="M52.5 440.6c-9.5 7.9-22.8 9.7-34.1 4.4S0 428.4 0 416L0 96C0 83.6 7.2 72.3 18.4 67s24.5-3.6 34.1 4.4l192 160L256 241l0-145c0-17.7 14.3-32 32-32s32 14.3 32 32l0 320c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-145-11.5 9.6-192 160z"/>
-        </svg>
-    )
-}
-
-const IconBack = () =>
-{
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
-            <path fill="white" d="M267.5 440.6c9.5 7.9 22.8 9.7 34.1 4.4s18.4-16.6 18.4-29l0-320c0-12.4-7.2-23.7-18.4-29s-24.5-3.6-34.1 4.4l-192 160L64 241 64 96c0-17.7-14.3-32-32-32S0 78.3 0 96L0 416c0 17.7 14.3 32 32 32s32-14.3 32-32l0-145 11.5 9.6 192 160z"/>
-        </svg>
-    )
-}
-
-const Action : React.FC<ActionProps> = ({ filled, children, onClick }) =>
+const Action : React.FC<ActionProps> = ({ filled, icon, onClick }) =>
 {
     return (
         <div onClick={onClick} className="flex h-[2rem] aspect-square bg-white data-[filled=false]:bg-transparent mx-2 justify-center items-center p-2.5 rounded-full cursor-pointer opacity-75 hover:opacity-100" data-filled={filled}>
-            {children}
+            <img src={icon} alt="icon" />
         </div>
     )
 }
@@ -79,52 +47,51 @@ const Time = ({ value }) =>
     )
 }
 
-const SongBar : React.FC<SongBarOptions> = ({ setSongIndex, audio }) =>
+const SongBar : React.FC<SongBarOptions> = ({ audio }) =>
 {
-    const [time, setTime] = useState(0);
+    const [time, setTime] = useState(audio.currentTime);
+    const [icon, setIcon] = useState(IconPlay);
     const [paused, setPaused] = useState(audio.paused);
 
-    useEffect(() => {
-        const updateTime = () => {
-            setTime(audio.currentTime);
-        };
+    const togglePause = () =>
+    {
+        if (audio.paused)
+        {
+            audio.play();
+            setPaused(false);
+        }
+        else
+        {
+            audio.pause();
+            setPaused(true);
+        }
+    }
 
-        // Set interval to update time while audio is playing
-        const interval = setInterval(() => {
-            if (!audio.paused) {
-                updateTime();
+    useEffect(() =>
+    {
+        console.log("hello world")
+        const interval = setInterval(() =>
+        {
+            if (!audio.paused)
+            {
+                setTime(audio.currentTime);
             }
-        }, 1000);
+        }, 500);
 
-        // Cleanup function to clear the interval
-        return () => {
-            clearInterval(interval);
-        };
+        return () => { clearInterval(interval); };
     }, [audio]);
+
+    useEffect(() =>
+    {
+        setIcon(paused ? IconPlay : IconPause);
+    }, [paused]);
 
     return (
         <div className="flex flex-col h-full w-[25rem]">
             <div className="flex w-full h-2/3 justify-center items-end">
-                <Action filled={false}>
-                    <IconBack />
-                </Action>
-                <Action filled={true} onClick={()=>{
-                        if (audio.paused)
-                        {
-                            audio.play();
-                            setPaused(false);
-                        }
-                        else
-                        {
-                            audio.pause();
-                            setPaused(true);
-                        }
-                    }} >
-                    <IconPlay paused={paused} />
-                </Action>
-                <Action filled={false}>
-                    <IconFoward />
-                </Action>
+                <Action filled={false} icon={IconBack} />
+                <Action filled={true} onClick={togglePause} icon={icon} />
+                <Action filled={false} icon={IconForward} />
             </div>
             <div className="flex w-full h-1/3">
                 <Time value={time} />

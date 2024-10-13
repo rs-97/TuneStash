@@ -3,66 +3,61 @@ const path = require('node:path')
 const fs = require('fs');
 const ytdl = require("@distube/ytdl-core");
 
-const constructConfig = () =>
+const DEFAULT_CONFIG = () =>{return {SP_ID : "", SP_SECRET : "", YT_KEY : ""}}
+const DEFAULT_PLAYLISTS = () => {return [];}
+
+const downloadAudio = ( url_id, name ) =>
 {
-    return {
-        SP_ID : "",
-        SP_SECRET : "",
-        YT_KEY : ""
-    }
+    return new Promise((resolve, reject) =>
+        {
+            const output = `data/songs/${name}.wav`;
+            const url = `https://www.youtube.com/watch?v=${url_id}`;
+            const stream = ytdl(url,
+                {
+                    filter: format => format.audioBitrate > 0,
+                    quality: "highestaudio"
+                }
+            );
+            const fileStream = fs.createWriteStream(output);
+
+            stream.pipe(fileStream);
+
+            fileStream.on('finish', () =>
+                {
+                    console.log('Download completed for:', name);
+                    resolve();
+                }
+            );
+
+            fileStream.on('error', (error) =>
+                {
+                    console.error('Error saving file:', error);
+                    reject(error);
+                }
+            );
+
+            stream.on('error', (error) =>
+                {
+                    console.error('Error downloading song:', error);
+                    reject(error);
+                }
+            );
+        }
+    );
 }
 
-const constructPlaylists = () =>
-{
-    return [];
-}
-
-const download_audio = ( url_id, name ) =>
-{
-    return new Promise((resolve, reject) => {
-        const output = `data/songs/${name}.wav`;
-        const url = `https://www.youtube.com/watch?v=${url_id}`;
-        const stream = ytdl(url, {
-            filter: format => format.audioBitrate > 0,
-            quality: "highestaudio"
-        });
-        const fileStream = fs.createWriteStream(output);
-
-        stream.pipe(fileStream);
-
-        fileStream.on('finish', () =>
-        {
-            console.log('Download completed for:', name);
-            resolve();
-        });
-
-        fileStream.on('error', (error) =>
-        {
-            console.error('Error saving file:', error);
-            reject(error);
-        });
-
-        stream.on('error', (error) =>
-        {
-            console.error('Error downloading song:', error);
-            reject(error);
-        });
-    });
-}
-
-const download_playlist_songs = async ( songs ) =>
+const downloadPlaylistAudio = async ( songs ) =>
 {
     // check if song with name {song.id}.wav exists in data/songs already, if it doesn't call download_song.
     for (const song of songs)
     {
-        const fileName = `${song.id}.wav`;
-        const filePath = `data/songs/${fileName}`;
+        const filePath = `data/songs/${song.id}.wav`;
         
         if (!fs.existsSync(filePath))
         {
             try
             {
-                await download_audio(song.url_id, song.id);
+                await downloadAudio(song.url_id, song.id);
             }
             catch (error)
             {
@@ -76,8 +71,7 @@ const download_playlist_songs = async ( songs ) =>
     }
 }
 
-// load application config, api keys, playlists etc 
-const save_config = async (event, config) =>
+const saveConfig = async (_event, config) =>
 {
     try
     {
@@ -94,8 +88,7 @@ const save_config = async (event, config) =>
     }
 }
 
-// load above
-const load_config = async () =>
+const loadConfig = async () =>
 {
     try
     {
@@ -105,17 +98,16 @@ const load_config = async () =>
     }
     catch (error)
     {
-        console.log(error);
-        console.log('creating config');
-        const config = constructConfig();
-        save_config("", config);
+        console.error("Error loading config, creating replacement.")
+        const config = DEFAULT_CONFIG();
+        saveConfig("", config);
         return JSON.stringify(config);
     }
 }
 
-const save_playlist_json = async (playlist) =>
+const savePlaylistToFS = async (playlist) =>
 {
-    let playlists = await load_playlists();
+    let playlists = await loadPlaylistsFromFS();
     playlists = JSON.parse(playlists);
 
     const index = playlists.findIndex(p => p.id === playlist.id);
@@ -128,18 +120,18 @@ const save_playlist_json = async (playlist) =>
         playlists.push(playlist);
     }
 
-    save_playlists("", playlists);
+    saveAllPlaylistsToFS("", playlists);
 }
 
-const save_playlist = async (event, data) =>
+const createPlaylist = async (_event, data) =>
 {
     const playlist = JSON.parse(data);
-    await save_playlist_json(playlist);
-    await download_playlist_songs(playlist.songs);
+    await savePlaylistToFS(playlist);
+    await downloadPlaylistAudio(playlist.songs);
     console.log("playlisted downloaded")
 }
 
-const save_playlists = async (event, playlists) =>
+const saveAllPlaylistsToFS = async (_event, playlists) =>
 {
     try
     {
@@ -156,7 +148,7 @@ const save_playlists = async (event, playlists) =>
     }
 }
 
-const load_playlists = async () =>
+const loadPlaylistsFromFS = async () =>
 {
     try
     {
@@ -168,14 +160,14 @@ const load_playlists = async () =>
     {
         console.log(error);
         console.log('creating playlists');
-        const playlists = constructPlaylists();
-        save_playlists("", playlists);
+        const playlists = DEFAULT_PLAYLISTS();
+        saveAllPlaylistsToFS("", playlists);
         return JSON.stringify(playlists);
     }
 }
 
 // takes in song id and returns base64 wav file
-const request_song = async (event, songId) =>
+const loadSongDataFromFS = async (_event, songId) =>
 {
     try
     {
@@ -193,34 +185,70 @@ const request_song = async (event, songId) =>
 
 const createWindow = () =>
 {
-    const win = new BrowserWindow({
+    const mainWindow = new BrowserWindow({
         width: 1000,
         height: 685,
         autoHideMenuBar: true,
-        resizable: false,
+        // resizable: false,
         fullscreenable: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js')
         }
     })
   
-    win.loadFile('./dist/index.html')
+    mainWindow.loadFile('./dist/index.html')
 
-    // win.webContents.openDevTools();
+    const reload_playlists = async () =>
+    {
+        try
+        {
+            const playlistData = await loadPlaylistsFromFS();
+            mainWindow.webContents.send("update-playlists", playlistData);
+        }
+        catch (error)
+        {
+            console.error(error);
+            return;
+        }
+    }
 
-    ipcMain.on("save-config", save_config);
-    ipcMain.handle("load-config", load_config);
-    ipcMain.on("save-playlist", save_playlist);
-    ipcMain.handle("load-playlists", load_playlists);
-    ipcMain.handle("request-song", request_song);
+    mainWindow.webContents.on('did-finish-load', reload_playlists);
+
+    mainWindow.webContents.openDevTools();
+
+    ipcMain.on("save-config", saveConfig);
+    ipcMain.on("add-playlist", createPlaylist);
+
+    ipcMain.on("request-playlists", reload_playlists);
+
+    ipcMain.on("request-song", async ( _event, songId ) =>
+        {
+            try
+            {
+                const songData = await loadSongDataFromFS(_event, songId)
+                mainWindow.webContents.send("update-song", songData);
+            }
+            catch (error)
+            {
+                console.error(error);
+                return;
+            }
+        }
+    );
+
+
+    // reload_playlists();
 }
 
+
 app.whenReady().then(() =>
-{
-    createWindow()
-})
+    {
+        createWindow();
+    }
+)
 
 app.on('window-all-closed', () =>
-{
-    if (process.platform !== 'darwin') app.quit()
-})
+    {
+        if (process.platform !== 'darwin') app.quit()
+    }
+)

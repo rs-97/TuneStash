@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SpotifyPlaylist, SpotifySong } from "./types.tsx";
 
 import "./App.css";
 import Overview from "./components/Overview.tsx";
@@ -6,13 +7,12 @@ import Playlists from "./components/Playlists.tsx";
 import Playbar from "./components/Playbar.tsx";
 import InputField from "./components/InputField.tsx";
 
-import { SpotifyPlaylist, SpotifySong } from "./types.tsx";
 
 let SP_CLIENT_ID : string = "";
 let SP_CLIENT_SECRET : string = "";
 let YT_API_KEY = "";
 
-const SONG_AUDIO = new Audio();
+const MAIN_AUDIO = new Audio();
 
 const loadBaseConfig = async () =>
 {
@@ -23,23 +23,20 @@ const loadBaseConfig = async () =>
 	YT_API_KEY = config["YT_KEY"];
 }
 
-window.onload = async () =>
+const getSpotifyAccessToken = async () : Promise<string | undefined> =>
 {
-	loadBaseConfig();
-}
-
-const getSpotifyAccessToken = async () : Promise<string> =>
-{
-	const apiUrl : string = "https://accounts.spotify.com/api/token";	
-	const body = new URLSearchParams({
-        "grant_type": "client_credentials",
-        "client_id": SP_CLIENT_ID,
-        "client_secret": SP_CLIENT_SECRET
-	}).toString();
+	const api_url : string = "https://accounts.spotify.com/api/token";	
+	const body = new URLSearchParams(
+		{
+			"grant_type": "client_credentials",
+			"client_id": SP_CLIENT_ID,
+			"client_secret": SP_CLIENT_SECRET
+		}
+	).toString();
 
 	try
 	{
-		const response = await fetch(apiUrl,
+		const response = await fetch(api_url,
 			{
 				method: "POST",
 				headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -58,18 +55,23 @@ const getSpotifyAccessToken = async () : Promise<string> =>
 	catch (error)
 	{
 		console.error("Failed to fetch access token:", error);
-		return null;
+		return undefined;
 	}
 }
 
-const getSpotifyPlaylist = async (playlistId : string) : Promise<SpotifyPlaylist> =>
+const getSpotifyPlaylist = async (playlistId : string) : Promise<SpotifyPlaylist | undefined> =>
 {
 	const access_token = await getSpotifyAccessToken();
-	const apiUrl = `https://api.spotify.com/v1/playlists/${playlistId}`;
+	if (access_token == undefined)
+	{
+		return undefined;
+	}
+
+	const api_url = `https://api.spotify.com/v1/playlists/${playlistId}`;
 
 	try
 	{
-		const response = await fetch(apiUrl,
+		const response = await fetch(api_url,
 			{
 				method: "GET",
 				headers: { "Authorization" : `Bearer ${access_token}` }
@@ -114,7 +116,8 @@ const getSpotifyPlaylist = async (playlistId : string) : Promise<SpotifyPlaylist
 				artists: get_artists(track["artists"]),
 				art: art["url"],
 				album: track["album"]["name"],
-				duration: track["duration_ms"]
+				duration: track["duration_ms"],
+				url_id : ""
 			}
 		}
 
@@ -124,7 +127,7 @@ const getSpotifyPlaylist = async (playlistId : string) : Promise<SpotifyPlaylist
 	catch (error)
 	{
 		console.error("Failed to fetch playlist:", error);
-		return null;
+		return undefined;
 	}
 }
 
@@ -152,9 +155,9 @@ const getSpotifySongURLSFromYoutube = async (songs : SpotifySong[]) : Promise< S
 	{
 		try
 		{
-			const apiUrl = "https://www.googleapis.com/youtube/v3/search";
+			const api_url = "https://www.googleapis.com/youtube/v3/search";
 			const response = await fetch(
-				`${apiUrl}?part=snippet&q=${encodeURIComponent(create_query(song))}&type=video&safeSearch=none&key=${YT_API_KEY}`
+				`${api_url}?part=snippet&q=${encodeURIComponent(create_query(song))}&type=video&safeSearch=none&key=${YT_API_KEY}`
 			);
 	
 			if (!response.ok)
@@ -188,63 +191,54 @@ const getSpotifySongURLSFromYoutube = async (songs : SpotifySong[]) : Promise< S
 	return songs;
 }
 
-const playSongFromId = async (songId : string) =>
+function App()
 {
-	const songData = await window.electronAPI.requestSong(songId);
-	SONG_AUDIO.pause();
-	SONG_AUDIO.src = `data:audio/wav;base64,${songData}`;
-	SONG_AUDIO.play();
-}
+	const [dialogActive, setDialogActive] = useState<boolean>(false);
+	const [playlistId, setPlaylistId] = useState<string>();
+	const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
+	const [playlist, setPlaylist] = useState<SpotifyPlaylist>();
+	const [songId, setSongId] = useState<string>();
+	const [song, setSong] = useState<SpotifySong>();
 
-// const audio = new Audio();
-
-function App() {
-	const [inputActive, setInputActive] = useState(false);
-	const [playlistIndex, setPlaylistIndex] = useState(-1);
-	const [songIndex, setSongIndex] = useState(-1);
-	const [playlists, setPlaylists] = useState([]);
-	const [currentSong, setCurrentSong] = useState({});
-
-	async function load_playlists()
+	window.electronAPI.onUpdatePlaylists((data : string) =>
 	{
-		const playlist_data = await window.electronAPI.loadPlaylists();
-		setPlaylists(JSON.parse(playlist_data));
-	}
+		setPlaylists(JSON.parse(data));
+	});
+
+	window.electronAPI.onUpdateSong((data : string) =>
+	{
+		MAIN_AUDIO.pause();
+		MAIN_AUDIO.src = `data:audio/wav;base64,${data}`;
+		MAIN_AUDIO.play();
+	});
 
 	useEffect(() =>
 	{
-		load_playlists();
+		const pl = playlists.find(x => x.id == playlistId);
+		if (pl == undefined)
+		{
+			return;
+		}
+
+		const song = pl.songs.find(x => x.id == songId);
+		setSong(song);
+		window.electronAPI.requestSong( songId );
+	}, [songId]);
+
+	useEffect(() =>
+	{
+		if (playlistId == undefined)
+		{
+			return;
+		}
+
+		const pl = playlists.find(x => x.id == playlistId);
+		setPlaylist(pl);
+	}, [playlistId]);
+
+	useEffect(() => {
+		window.electronAPI.requestPlaylists();
 	}, []);
-
-	useEffect(() =>
-	{
-		setSongIndex(-1);
-	}, [playlistIndex]);
-
-	useEffect(() =>
-	{
-		if (playlistIndex == -1 || songIndex == -1)
-		{
-			return;
-		}
-
-		try
-		{
-			const song = playlists[playlistIndex].songs[songIndex];
-			setCurrentSong(song);
-			playSongFromId(song.id);
-		}
-		catch (error)
-		{
-			console.error(error)
-			return;
-		}
-	}, [songIndex]);
-
-  	function open_add_playlist()
-	{
-		setInputActive(true);
-	}
 
 	async function add_playlist(link: string)
 	{
@@ -254,39 +248,49 @@ function App() {
 			return;
 		}
 
-		setInputActive(false);
+		setDialogActive(false);
 
-		const sp_playlist : SpotifyPlaylist = await getSpotifyPlaylist(playlist_data[1])
+		const sp_playlist : SpotifyPlaylist | undefined = await getSpotifyPlaylist(playlist_data[1])
+		if (sp_playlist == undefined)
+		{
+			return;
+		}
+
 		sp_playlist.songs = await getSpotifySongURLSFromYoutube(sp_playlist.songs);
-		window.electronAPI.savePlaylist(JSON.stringify(sp_playlist));
-	}
-
-	function on_playlist_link_update(link : string)
-	{
-
+		window.electronAPI.addPlaylist(JSON.stringify(sp_playlist));
 	}
 
 	return (
 		<div className="flex flex-col relative w-screen h-screen overflow-hidden bg-zinc-950">
 			<div className="flex flex-1">
-				<Playlists playlists={playlists} setPlaylist={setPlaylistIndex} callback={open_add_playlist} />
-				<Overview playlists={playlists} playlistIndex={playlistIndex} setSong={setSongIndex} />
+
+				<Playlists
+					playlists={playlists}
+					setPlaylistId={setPlaylistId}
+					callback={()=>{setDialogActive(true)}}
+				/>
+
+				<Overview
+					playlist={playlist}
+					setSongId={setSongId}
+				/>
 			</div>
+
+
 			<Playbar
-				visible={songIndex != -1}
-				song={currentSong}
-				audio={SONG_AUDIO}
-				setSongIndex={setSongIndex}
+				visible={song != undefined}
+				song={song}
+				audio={MAIN_AUDIO}
 			/>
 
 			<InputField
-				active={inputActive}
-				setActive={setInputActive}
+				active={dialogActive}
+				setActive={setDialogActive}
 				onSubmit={add_playlist}
-				onUpdate={on_playlist_link_update}
 			/>
 		</div>
 	);
 }
 
+window.onload = loadBaseConfig
 export default App;
