@@ -1,12 +1,12 @@
-export interface SpotifyPlaylist
+export interface TuneStashPlaylist
 {
 	id : string,
 	name : string,
 	art : string,
-	songs : SpotifySong[]
+	songs : TuneStashSong[]
 }
 
-export interface SpotifySong
+export interface TuneStashSong
 {
 	id : string,
 	name : string,

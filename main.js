@@ -187,9 +187,9 @@ const createWindow = () =>
 {
     const mainWindow = new BrowserWindow({
         width: 1000,
-        height: 685,
+        height: 785,
         autoHideMenuBar: true,
-        // resizable: false,
+        resizable: false,
         fullscreenable: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js')
@@ -214,10 +214,14 @@ const createWindow = () =>
 
     mainWindow.webContents.on('did-finish-load', reload_playlists);
 
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
 
     ipcMain.on("save-config", saveConfig);
-    ipcMain.on("add-playlist", createPlaylist);
+    ipcMain.on("add-playlist", async (_event, data) =>
+    {
+        await createPlaylist(_event, data);
+        await reload_playlists();
+    });
 
     ipcMain.on("request-playlists", reload_playlists);
 

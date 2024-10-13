@@ -4,7 +4,7 @@ import IconTrash from "../assets/trash.svg";
 import IconRefresh from "../assets/refresh.svg";
 import SongList from "./SongList.tsx";
 
-import { SpotifyPlaylist } from "../types.tsx";
+import { TuneStashPlaylist } from "../types.tsx";
 
 interface ActionsHeaderButtonOptions
 {
@@ -28,7 +28,8 @@ interface ActionsHeaderOptions
 
 interface OverviewOptions
 {
-    playlist : SpotifyPlaylist | undefined,
+    playlist : TuneStashPlaylist | undefined,
+    songId : string | undefined,
     setSongId : React.Dispatch<React.SetStateAction<string | undefined>>,
 }
 
@@ -82,11 +83,15 @@ const ActionsHeader : React.FC<ActionsHeaderOptions> = ({ visible }) =>
     )
 }
 
-const Overview : React.FC<OverviewOptions> = ({ playlist, setSongId }) =>
+const Overview : React.FC<OverviewOptions> = ({ playlist, songId, setSongId }) =>
 {
     if (playlist == undefined)
     {
-        return (<></>)
+        return (
+            <div className="flex flex-1 h-full justify-center items-center">
+                <span className="font-bold text-white/80 text-xl">Select or Add a playlist</span>
+            </div>
+        )
     }
 
     return (
@@ -106,6 +111,7 @@ const Overview : React.FC<OverviewOptions> = ({ playlist, setSongId }) =>
                     <SongList
                         visible={playlist.name != null}
                         songs={playlist.songs}
+                        songId={songId}
                         setSongId={setSongId}
                     />
                 </div>

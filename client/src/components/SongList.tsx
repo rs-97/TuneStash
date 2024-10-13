@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { SpotifySong } from "../types";
-import PlayIcon from "../assets/play.svg";
+import { TuneStashSong } from "../types";
+import PlayIconWhite from "../assets/play_white.svg";
 
 interface SongOptions
 {
@@ -10,13 +10,15 @@ interface SongOptions
     artist : string,
     album : string,
     length : number,
+    selected : boolean,
     onClick : React.MouseEventHandler<HTMLTableRowElement>
 }
 
 interface SongListOptions
 {
     visible : boolean,
-    songs : SpotifySong[],
+    songs : TuneStashSong[],
+    songId : string | undefined,
     setSongId : React.Dispatch<React.SetStateAction<string | undefined>>
 }
 
@@ -28,7 +30,7 @@ function format_seconds_to_timestamp(total_seconds: number)
     return `${minutes}:${seconds_formatted}`;
 }
 
-const Song : React.FC<SongOptions> = ({ index, name, art, artist, album, length, onClick }) =>
+const Song : React.FC<SongOptions> = ({ index, name, art, artist, album, length, selected, onClick }) =>
 {
     const [hover, setHover] = useState(false);
     const length_formatted : string = format_seconds_to_timestamp(length);
@@ -38,9 +40,9 @@ const Song : React.FC<SongOptions> = ({ index, name, art, artist, album, length,
     {
         logo = (
             <div className="w-full h-full justify-center items-center flex">
-                <div className="w-5 h-5 flex bg-zinc-400 rounded-full justify-center items-center">
-                    <img src={PlayIcon} alt="play" className="w-2.5 h-2.5" />
-                </div>
+                {/* <div className="w-5 h-5 flex bg-zinc-400 rounded-full justify-center items-center"> */}
+                    <img src={PlayIconWhite} alt="play" className="w-2.5 h-2.5" />
+                {/* </div> */}
             </div>
         );
     }
@@ -52,13 +54,13 @@ const Song : React.FC<SongOptions> = ({ index, name, art, artist, album, length,
             onMouseLeave={()=>{setHover(false)}}
             onClick={onClick}
         >
-            <th className="w-[2.5rem]">{logo}</th>
+            <th className="w-[2.5rem] data-[selected=true]:text-purple-500" data-selected={selected}>{logo}</th>
             <td className="flex py-2 pl-1 w-[20rem] pointer-events-none">
                 <div className="flex h-10 aspect-square rounded-md overflow-hidden relative">
                     <img src={art} alt="art" className="absolute w-full h-full object-cover" />
                 </div>
                 <div className="flex flex-col ml-3 pointer-events-none">
-                    <span className="font-semibold">{name}</span>
+                    <span className="font-semibold data-[selected=true]:text-purple-500" data-selected={selected}>{name}</span>
                     <span className="text-xs">{artist}</span>
                 </div>
             </td>
@@ -68,7 +70,7 @@ const Song : React.FC<SongOptions> = ({ index, name, art, artist, album, length,
     )
 }
 
-const SongList : React.FC<SongListOptions> = ({ visible, songs, setSongId }) =>
+const SongList : React.FC<SongListOptions> = ({ visible, songs, songId, setSongId }) =>
 {
     if (!visible)
     {
@@ -86,6 +88,7 @@ const SongList : React.FC<SongListOptions> = ({ visible, songs, setSongId }) =>
                 album={song.album}
                 length={Math.floor(song.duration / 1000)}
                 art={song.art}
+                selected={songId == song.id}
                 onClick={()=>{
                     setSongId(song.id)
                 }}

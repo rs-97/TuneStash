@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { SpotifyPlaylist, SpotifySong } from "./types.tsx";
+import { TuneStashPlaylist, TuneStashSong } from "./types.tsx";
 
 import "./App.css";
 import Overview from "./components/Overview.tsx";
 import Playlists from "./components/Playlists.tsx";
 import Playbar from "./components/Playbar.tsx";
 import InputField from "./components/InputField.tsx";
-
 
 let SP_CLIENT_ID : string = "";
 let SP_CLIENT_SECRET : string = "";
@@ -59,7 +58,7 @@ const getSpotifyAccessToken = async () : Promise<string | undefined> =>
 	}
 }
 
-const getSpotifyPlaylist = async (playlistId : string) : Promise<SpotifyPlaylist | undefined> =>
+const getTuneStashPlaylist = async (playlistId : string) : Promise<TuneStashPlaylist | undefined> =>
 {
 	const access_token = await getSpotifyAccessToken();
 	if (access_token == undefined)
@@ -96,7 +95,7 @@ const getSpotifyPlaylist = async (playlistId : string) : Promise<SpotifyPlaylist
 		}
 
 		// playlist
-		let playlist : SpotifyPlaylist;
+		let playlist : TuneStashPlaylist;
 		playlist = {
 			id: data["id"],
 			name: data["name"],
@@ -105,7 +104,7 @@ const getSpotifyPlaylist = async (playlistId : string) : Promise<SpotifyPlaylist
 		};
 		
 		// songs
-		let songs : SpotifySong[] = [];
+		let songs : TuneStashSong[] = [];
 		for (let i = 0; i < data["tracks"]["items"].length; i++)
 		{
 			let track = data["tracks"]["items"][i]["track"];
@@ -141,17 +140,26 @@ const getPlaylistDataFromLink = (link : string) : string[] =>
 			return ["spotify", match[1]];
 		}
 	}
+	if (link.startsWith("https://www.youtube.com/") || link.startsWith("https://music.youtube.com/"))
+	{
+		const parsedUrl = new URL(link);
+		const list = parsedUrl.searchParams.get('list');
+		if (list && list != "")
+		{
+			return ["youtube", list];
+		}
+	}
 	return [];
 }
 
-const getSpotifySongURLSFromYoutube = async (songs : SpotifySong[]) : Promise< SpotifySong[]> =>
+const getSpotifyURLSFromYoutube = async (songs : TuneStashSong[]) : Promise< TuneStashSong[]> =>
 {
-	function create_query( song : SpotifySong )
+	function create_query( song : TuneStashSong )
 	{
 		return `${song.name} by ${ song.artists.join(", ") }`;
 	}
 
-	async function fetch_song_id(song : SpotifySong)
+	async function fetch_song_id(song : TuneStashSong)
 	{
 		try
 		{
@@ -191,14 +199,126 @@ const getSpotifySongURLSFromYoutube = async (songs : SpotifySong[]) : Promise< S
 	return songs;
 }
 
+const getYoutubePlaylistVideos = async (playlistId : string) : Promise<TuneStashPlaylist | undefined> =>
+{
+	// fetch playlist information
+	const fetch_playlist_info = async () =>
+	{
+		try
+		{
+			const api_url = "https://www.googleapis.com/youtube/v3/playlists";
+			const response = await fetch(
+				`${api_url}?part=snippet&id=${encodeURIComponent(playlistId)}&safeSearch=none&key=${YT_API_KEY}`
+			)
+
+			if (!response.ok)
+			{
+				throw new Error("Unable to fetch yt playlist info");
+			}
+
+			const data = await response.json();
+			return data.items[0]?.snippet.title;
+		}
+		catch (error)
+		{
+			console.error(error)
+			return;
+		}
+	}
+
+	const playlist_title = await fetch_playlist_info();
+	
+	// fetch playlist videos
+	const extract_video_data = (data) =>
+	{
+		let result = [];
+		for (let i = 0; i < data.length; i++)
+		{
+			result.push({
+				artist : data[i].snippet.channelTitle,
+				name : data[i].snippet.title,
+				art : data[i].snippet.thumbnails.default.url,
+				url_id : data[i].snippet.resourceId.videoId,
+			});
+		}
+		return result;
+	}
+
+	const fetch_playlist_videos = async ( videos : string[] = [], pageToken : string = "" ) =>
+	{
+		try
+		{
+			const api_url = "https://www.googleapis.com/youtube/v3/playlistItems";
+			const response = await fetch(
+				`${api_url}?part=snippet&playlistId=${encodeURIComponent(playlistId)}&maxResults=50&safeSearch=none&key=${YT_API_KEY}` + ( pageToken != "" ? `&pageToken=${pageToken}` : "" )
+			)
+
+			if (!response.ok)
+			{
+				throw new Error("Unable to fetch yt playlist info");
+			}
+
+			const data = await response.json();
+			videos = [...videos, ...extract_video_data(data.items)]
+
+			if (data.nextPageToken)
+			{
+				return await fetch_playlist_videos(videos, data.nextPageToken);
+			}
+
+			return videos;
+		}
+		catch (error)
+		{
+			console.error(error)
+			return;
+		}
+	}
+
+	const videos = await fetch_playlist_videos();
+	if (videos == undefined || videos[0] == undefined)
+	{
+		return;
+	}
+
+	console.log("123")
+
+	let playlist : TuneStashPlaylist = {
+		id : playlistId,
+		name : playlist_title,
+		art : videos[0].art,
+		songs : []
+	}
+
+	let songs : TuneStashSong[] = [];
+	for (let i = 0; i < videos.length; i++)
+	{
+		songs[i] = {
+			id : videos[i].url_id,
+			name : videos[i].name,
+			artists: [ videos[i].artist ],
+			art: videos[i].art,
+			album: playlist_title,
+			duration: 0,
+			url_id : videos[i].url_id
+		}
+	}
+
+	console.log("456")
+
+	playlist.songs = songs;
+	return playlist;
+}
+
 function App()
 {
 	const [dialogActive, setDialogActive] = useState<boolean>(false);
 	const [playlistId, setPlaylistId] = useState<string>();
-	const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
-	const [playlist, setPlaylist] = useState<SpotifyPlaylist>();
+	const [playlists, setPlaylists] = useState<TuneStashPlaylist[]>([]);
+	const [playlist, setPlaylist] = useState<TuneStashPlaylist>();
 	const [songId, setSongId] = useState<string>();
-	const [song, setSong] = useState<SpotifySong>();
+	const [song, setSong] = useState<TuneStashSong>();
+	const [songPlaylist, setSongPlaylist] = useState<TuneStashPlaylist>();
 
 	window.electronAPI.onUpdatePlaylists((data : string) =>
 	{
@@ -222,6 +342,7 @@ function App()
 
 		const song = pl.songs.find(x => x.id == songId);
 		setSong(song);
+		setSongPlaylist(pl);
 		window.electronAPI.requestSong( songId );
 	}, [songId]);
 
@@ -249,15 +370,22 @@ function App()
 		}
 
 		setDialogActive(false);
-
-		const sp_playlist : SpotifyPlaylist | undefined = await getSpotifyPlaylist(playlist_data[1])
-		if (sp_playlist == undefined)
+		if (playlist_data[0] == "spotify")
 		{
-			return;
+			const sp_playlist : TuneStashPlaylist | undefined = await getTuneStashPlaylist(playlist_data[1])
+			if (sp_playlist == undefined) { return; }
+			sp_playlist.songs = await getSpotifyURLSFromYoutube(sp_playlist.songs);
+			window.electronAPI.addPlaylist(JSON.stringify(sp_playlist));
 		}
+		else if (playlist_data[0] == "youtube")
+		{
+			const yt_playlist : TuneStashPlaylist | undefined = await getYoutubePlaylistVideos(playlist_data[1]);
 
-		sp_playlist.songs = await getSpotifySongURLSFromYoutube(sp_playlist.songs);
-		window.electronAPI.addPlaylist(JSON.stringify(sp_playlist));
+			console.log(yt_playlist);
+
+			if (yt_playlist == undefined) { return; }
+			window.electronAPI.addPlaylist(JSON.stringify(yt_playlist));
+		}
 	}
 
 	return (
@@ -266,12 +394,14 @@ function App()
 
 				<Playlists
 					playlists={playlists}
+					playlistId={playlistId}
 					setPlaylistId={setPlaylistId}
 					callback={()=>{setDialogActive(true)}}
 				/>
 
 				<Overview
 					playlist={playlist}
+					songId={songId}
 					setSongId={setSongId}
 				/>
 			</div>
@@ -280,6 +410,8 @@ function App()
 			<Playbar
 				visible={song != undefined}
 				song={song}
+				songPlaylist={songPlaylist}
+				setSongId={setSongId}
 				audio={MAIN_AUDIO}
 			/>
 

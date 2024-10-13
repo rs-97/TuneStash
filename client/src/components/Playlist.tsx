@@ -2,13 +2,14 @@ interface PlaylistOptions
 {
     name : string,
     art : string,
+    selected : boolean,
     onClick : React.MouseEventHandler<HTMLDivElement>
 }
 
-const Playlist : React.FC<PlaylistOptions> = ({ name, art, onClick }) =>
+const Playlist : React.FC<PlaylistOptions> = ({ name, art, selected, onClick }) =>
 {
     return (
-        <div onClick={onClick} className="flex w-full h-16 mb-2 p-2 rounded-sm items-center hover:bg-white/5 cursor-pointer">
+        <div onClick={onClick} data-selected={selected} className="flex w-full h-16 mb-2 p-2 rounded-sm items-center hover:bg-white/5 data-[selected=true]:bg-purple-500/10 cursor-pointer">
             <div className="flex h-12 w-12 rounded-sm overflow-hidden relative">
                 <img src={art} alt="album" className="w-full h-full absolute" />
             </div>

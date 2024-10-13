@@ -5,7 +5,7 @@ import IconPause from "../assets/pause.svg";
 import IconForward from "../assets/forward.svg";
 import IconBack from "../assets/back.svg";
 
-
+import { TuneStashPlaylist, TuneStashSong } from "../types.tsx";
 import { useEffect, useState } from "react";
 
 interface ActionProps
@@ -18,7 +18,10 @@ interface ActionProps
 interface SongBarOptions
 {
     setSongIndex : Function,
-    audio : HTMLAudioElement
+    audio : HTMLAudioElement,
+    songPlaylist : TuneStashPlaylist | undefined,
+    setSongId : Function,
+    song : TuneStashSong | undefined,
 }
 
 function format_seconds_to_timestamp(total_seconds: number)
@@ -47,29 +50,71 @@ const Time = ({ value }) =>
     )
 }
 
-const SongBar : React.FC<SongBarOptions> = ({ audio }) =>
+const SongBar : React.FC<SongBarOptions> = ({ audio, song, songPlaylist, setSongId }) =>
 {
     const [time, setTime] = useState(audio.currentTime);
-    const [icon, setIcon] = useState(IconPlay);
+    const [icon, setIcon] = useState(IconPause);
     const [paused, setPaused] = useState(audio.paused);
 
     const togglePause = () =>
     {
+        setPaused(!audio.paused)
         if (audio.paused)
         {
             audio.play();
-            setPaused(false);
         }
         else
         {
             audio.pause();
-            setPaused(true);
         }
+    }
+
+    const previous = () =>
+    {
+        if (songPlaylist == undefined || song == undefined)
+        {
+            return;
+        }
+
+        const index = songPlaylist.songs.findIndex(x => x.id == song.id);
+        if (index == 0)
+        {
+            return;
+        }
+
+        const newSong = songPlaylist.songs[index - 1];
+        if (newSong == undefined)
+        {
+            return;
+        }
+
+        setSongId(newSong.id);
+    }
+
+    const next = () => 
+    {
+        if (songPlaylist == undefined || song == undefined)
+            {
+                return;
+            }
+    
+            const index = songPlaylist.songs.findIndex(x => x.id == song.id);
+            if (index >= songPlaylist.songs.length - 1)
+            {
+                return;
+            }
+    
+            const newSong = songPlaylist.songs[index + 1];
+            if (newSong == undefined)
+            {
+                return;
+            }
+    
+            setSongId(newSong.id);
     }
 
     useEffect(() =>
     {
-        console.log("hello world")
         const interval = setInterval(() =>
         {
             if (!audio.paused)
@@ -89,9 +134,9 @@ const SongBar : React.FC<SongBarOptions> = ({ audio }) =>
     return (
         <div className="flex flex-col h-full w-[25rem]">
             <div className="flex w-full h-2/3 justify-center items-end">
-                <Action filled={false} icon={IconBack} />
+                <Action filled={false} icon={IconBack} onClick={previous} />
                 <Action filled={true} onClick={togglePause} icon={icon} />
-                <Action filled={false} icon={IconForward} />
+                <Action filled={false} icon={IconForward} onClick={next} />
             </div>
             <div className="flex w-full h-1/3">
                 <Time value={time} />
