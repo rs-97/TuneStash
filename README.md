@@ -41,4 +41,4 @@ Once the build process is complete, you are free to use the application.
 
 ## License
 
-This project is not intended for distribution and is meant solely for my own educational purposes. 
+This project is licensed under the GNU General Public License. See the LICENSE file for more details.
