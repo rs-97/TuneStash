@@ -14,6 +14,10 @@ TuneStash is a desktop application that allows users to download YouTube and Spo
 - YouTube API key (obtain [here](https://developers.google.com/youtube/v3/getting-started))
 - Spotify API key (obtain [here](https://developer.spotify.com/dashboard/))
 
+## Todo
+- Loop button functionality
+- Set accurate track times
+
 ## Installation Instructions
 
 1. **Clone the repository:**
