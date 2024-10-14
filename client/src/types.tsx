@@ -3,6 +3,7 @@ export interface TuneStashPlaylist
 	id : string,
 	name : string,
 	art : string,
+	added : number,
 	songs : TuneStashSong[]
 }
 

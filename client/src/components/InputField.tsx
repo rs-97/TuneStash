@@ -1,10 +1,13 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 interface InputFieldOptions
 {
     active : boolean,
     setActive : React.Dispatch<React.SetStateAction<boolean>>,
-    onSubmit : Function
+    onSubmit : Function,
+    submitLabel : string,
+    fields : string[],
+    defaults : string[] | undefined
 }
 
 interface ButtonOptions
@@ -14,11 +17,6 @@ interface ButtonOptions
     onClick : React.MouseEventHandler<HTMLButtonElement>,
 }
 
-interface ResultTextOptions
-{
-    type : string
-}
-
 const Button : React.FC<ButtonOptions> = ({ label, invert, onClick }) =>
 {
     return (
@@ -26,26 +24,20 @@ const Button : React.FC<ButtonOptions> = ({ label, invert, onClick }) =>
     )
 }
 
-const ResultText : React.FC<ResultTextOptions> = ({type}) =>
+const InputField : React.FC<InputFieldOptions> = ({ active, setActive, onSubmit, submitLabel, fields, defaults }) =>
 {
-    return (
-        <span className="font-semibold text-white/20 data-[type='spotify']:text-green-500 data-[type='youtube']:text-red-500 " data-type={type}>
-            {type == "none" ? "" : type.toUpperCase()}
-        </span>
-    )
-}
+    const [values, setValues] = useState([]);
 
-const InputField : React.FC<InputFieldOptions> = ({ active, setActive, onSubmit }) =>
-{
-    const [link, setLink] = useState("");
+    useEffect(() =>
+    {
+        setValues(defaults || Array(fields.length).fill(''));
+    }, [defaults])
 
     function submit(e)
     {
         if (e.preventDetault)
-        {
-            e.preventDetault();
-        }
-        onSubmit(link);
+        { e.preventDetault(); }
+        onSubmit(values);
     }
 
     function cancel()
@@ -53,25 +45,36 @@ const InputField : React.FC<InputFieldOptions> = ({ active, setActive, onSubmit 
         setActive(false);
     }
 
-    function update(e)
+    function update(index, value)
     {
-        setLink(e.target.value)
+        let newValues = JSON.parse(JSON.stringify(values));
+        newValues[index] = value;
+        setValues(newValues);
     }
 
     if (active)
     {
+        const inputs = fields.map(( v, i ) =>
+        {
+            const id = "id_" + v.replace(" ", "");
+            return (
+                <div className="relative w-full flex items-center my-1">
+                    <label for={id} data-empty={(values[i] == undefined || values[i] == "")} className="absolute flex text-white/30 pl-3 data-[empty=false]:-translate-y-5 data-[empty=false]:text-xs data-[empty=false]:text-white/90 data-[empty=false]:font-semibold transition-all">{v}</label>
+                    <input id={id} onChange={(e) => { update( i, e.target.value ) }} type="text" value={values[i]} className="placeholder:font-medium w-full rounded-sm border-2 border-zinc-800 bg-transparent p-2 px-3 outline-none" />
+                </div>
+            )
+        });
+
         return (
             <div className="flex absolute w-full h-full z-20 bg-zinc-950/50 justify-center items-center">
-                <div className="flex flex-col w-1/2 min-h-[2rem] bg-zinc-900 items-center justify-center p-4">
+                <div className="flex flex-col w-1/2 min-h-[2rem] bg-zinc-900 items-center justify-center p-3">
                     <form className="flex flex-col w-full text-white/80 text-sm" onSubmit={submit}>
-                        <span className="font-bold ml-1">Add New Playlist</span>
-                        <input onChange={update} type="text" placeholder="playlist link" className="placeholder:text-white/30 placeholder:font-medium w-full mt-2 rounded-sm border-2 border-zinc-800 bg-transparent p-1 px-2" />
+                        {inputs}
                     </form>
-                    <div className="flex w-full text-white/80 text-sm mt-3 pl-1.5 justify-between items-center">
-                        <ResultText type="none" />
+                    <div className="flex w-full text-white/80 text-sm mt-3 pl-1.5 justify-end items-center">
                         <div className="flex">
                             <Button label="Cancel" invert={false} onClick={cancel} />
-                            <Button label="Add" invert={true} onClick={submit} />
+                            <Button label={submitLabel} invert={true} onClick={submit} />
                         </div>
                     </div>
                 </div>

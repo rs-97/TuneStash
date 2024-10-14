@@ -53,7 +53,7 @@ const SongOptions : React.FC<SongOptionsOptions> = ({ audio }) =>
     }
 
     return (
-        <div className="flex h-full min-w-[18rem] pl-[8rem] items-center">
+        <div className="flex h-full w-[20rem] pl-[8rem] items-center">
             <div className="flex w-5 h-5 py-1">
                 {/* <IconVolLow /> */}
                 <IconVolHigh />

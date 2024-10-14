@@ -4,9 +4,12 @@ import IconPlay from "../assets/play.svg";
 import IconPause from "../assets/pause.svg";
 import IconForward from "../assets/forward.svg";
 import IconBack from "../assets/back.svg";
+import IconShuffle from "../assets/shuffle.svg";
+import IconShuffleFill from "../assets/shuffle_fill.svg";
+import IconRepeat from "../assets/repeat.svg";
 
 import { TuneStashPlaylist, TuneStashSong } from "../types.tsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface ActionProps
 {
@@ -22,6 +25,9 @@ interface SongBarOptions
     songPlaylist : TuneStashPlaylist | undefined,
     setSongId : Function,
     song : TuneStashSong | undefined,
+    shuffle : boolean,
+    setShuffle : React.Dispatch<React.SetStateAction<boolean>>,
+    setIsNext : React.Dispatch<React.SetStateAction<boolean>>
 }
 
 function format_seconds_to_timestamp(total_seconds: number)
@@ -50,15 +56,13 @@ const Time = ({ value }) =>
     )
 }
 
-const SongBar : React.FC<SongBarOptions> = ({ audio, song, songPlaylist, setSongId }) =>
+const SongBar : React.FC<SongBarOptions> = ({ audio, song, songPlaylist, setSongId, shuffle, setShuffle, setIsNext }) =>
 {
     const [time, setTime] = useState(audio.currentTime);
-    const [icon, setIcon] = useState(IconPause);
-    const [paused, setPaused] = useState(audio.paused);
+    const audioRef = useRef(audio);
 
     const togglePause = () =>
     {
-        setPaused(!audio.paused)
         if (audio.paused)
         {
             audio.play();
@@ -88,55 +92,65 @@ const SongBar : React.FC<SongBarOptions> = ({ audio, song, songPlaylist, setSong
             return;
         }
 
+        setIsNext(true);
         setSongId(newSong.id);
     }
 
     const next = () => 
     {
         if (songPlaylist == undefined || song == undefined)
-            {
-                return;
-            }
-    
-            const index = songPlaylist.songs.findIndex(x => x.id == song.id);
-            if (index >= songPlaylist.songs.length - 1)
-            {
-                return;
-            }
-    
-            const newSong = songPlaylist.songs[index + 1];
-            if (newSong == undefined)
-            {
-                return;
-            }
-    
-            setSongId(newSong.id);
+        {
+            return;
+        }
+
+        const index = songPlaylist.songs.findIndex(x => x.id == song.id);
+        if (index >= songPlaylist.songs.length - 1)
+        {
+            return;
+        }
+
+        const newSong = songPlaylist.songs[index + 1];
+        if (newSong == undefined)
+        {
+            return;
+        }
+
+        setIsNext(true);
+        setSongId(newSong.id);
     }
 
     useEffect(() =>
-    {
-        const interval = setInterval(() =>
+    {  
+        const audioElement = audioRef.current;
+
+        const handleTimeUpdate = () =>
         {
-            if (!audio.paused)
-            {
-                setTime(audio.currentTime);
-            }
-        }, 500);
+            setTime(audioRef.current.currentTime);
+        }
 
-        return () => { clearInterval(interval); };
-    }, [audio]);
+        const handleEnded = () =>
+        {
+            next();
+        }
 
-    useEffect(() =>
-    {
-        setIcon(paused ? IconPlay : IconPause);
-    }, [paused]);
+        audioElement.addEventListener("timeupdate", handleTimeUpdate);
+        audioElement.addEventListener("ended", handleEnded)
+
+        return () => 
+        {
+            audioElement.removeEventListener("timeupdate", handleTimeUpdate);
+            audioElement.removeEventListener("timeupdate", handleEnded);
+        }
+    }, [audioRef, next]);
 
     return (
         <div className="flex flex-col h-full w-[25rem]">
             <div className="flex w-full h-2/3 justify-center items-end">
+                <Action filled={false} icon={shuffle ? IconShuffleFill : IconShuffle} onClick={()=>{setShuffle(!shuffle)}} />
                 <Action filled={false} icon={IconBack} onClick={previous} />
-                <Action filled={true} onClick={togglePause} icon={icon} />
+                <Action filled={true} onClick={togglePause} icon={ audioRef.current.paused ? IconPlay : IconPause } />
                 <Action filled={false} icon={IconForward} onClick={next} />
+                <Action filled={false} icon={IconRepeat} />
             </div>
             <div className="flex w-full h-1/3">
                 <Time value={time} />

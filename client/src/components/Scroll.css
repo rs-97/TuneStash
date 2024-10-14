@@ -1,0 +1,47 @@
+.song-name-container
+{
+    overflow: hidden;
+    position: relative; 
+    width: 100%; 
+}
+
+.scroll
+{
+    display: inline-block;
+    white-space: nowrap;
+    animation: none; 
+}
+
+.scrolling
+{
+    animation: scroll 15s linear infinite;
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0%);
+    }
+    25% {
+        transform: translateX(0%);
+    }
+    50% {
+        transform: translateX(-100%);
+        opacity: 1;
+    }
+    50.01% {
+        opacity: 0;
+    }
+    50.02% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    50.03% {
+        opacity: 1;
+    }
+    75% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(0%);
+    }
+}

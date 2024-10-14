@@ -49,23 +49,29 @@ const Song : React.FC<SongOptions> = ({ index, name, art, artist, album, length,
     
     return (
         <tr
-            className="text-white text-sm hover:bg-white/5 cursor-pointer"
+            className="text-white/80 text-sm hover:bg-white/5 cursor-pointer"
             onMouseEnter={()=>{setHover(true)}}
             onMouseLeave={()=>{setHover(false)}}
             onClick={onClick}
         >
-            <th className="w-[2.5rem] data-[selected=true]:text-purple-500" data-selected={selected}>{logo}</th>
-            <td className="flex py-2 pl-1 w-[20rem] pointer-events-none">
-                <div className="flex h-10 aspect-square rounded-md overflow-hidden relative">
+            <th className="data-[selected=true]:text-purple-500" data-selected={selected}>
+                <div className="w-5 mr-2 ml-3.5">
+                    {logo}
+                </div>
+            </th>
+            <td className="flex py-2 w-[40vw] pointer-events-none">
+                <div className="flex h-10 aspect-square rounded-md overflow-hidden relative flex-shrink-0">
                     <img src={art} alt="art" className="absolute w-full h-full object-cover" />
                 </div>
-                <div className="flex flex-col ml-3 pointer-events-none">
+                <div className="flex flex-col ml-3 pointer-events-none whitespace-nowrap overflow-hidden">
                     <span className="font-semibold data-[selected=true]:text-purple-500" data-selected={selected}>{name}</span>
                     <span className="text-xs">{artist}</span>
                 </div>
             </td>
-            <td className=" w-[17rem] font-semibold pointer-events-none">{album}</td>
-            <td className=" w-[3rem] text-center pointer-events-none">{length_formatted}</td>
+            <td className=" w-[40vw] font-semibold pointer-events-none  whitespace-nowrap overflow-hidden">{album}</td>
+            <td className=" w-[5vw] text-center pointer-events-none">
+                <div className="mr-3.5">{length_formatted}</div>
+            </td>
         </tr>
     )
 }
@@ -97,8 +103,22 @@ const SongList : React.FC<SongListOptions> = ({ visible, songs, songId, setSongI
     });
 
     return (
-        <div className="flex-auto h-0 px-3.5 overflow-y-scroll no-scrollbar">
+        <div className="flex-auto h-0 overflow-y-scroll no-scrollbar">
             <table role="flex w-full grid w-full max-h-full">
+
+                <tr className="text-white/80 text-sm pointer-events-none sticky top-0 z-20 border-b border-white/10 bg-zinc-950/30 backdrop-blur-sm">
+                    <th>
+                        <div className="w-5 mr-2 ml-3.5">#</div>
+                    </th>
+                    <td className="flex py-2 w-[40vw]">
+                        <div className="flex flex-col">Title</div>
+                    </td>
+                    <td className=" w-[40vw] font-semibold  whitespace-nowrap overflow-hidden">Album</td>
+                    <td className=" w-[5vw] text-center">
+                        <div className="mr-3.5">T</div>
+                    </td>
+                </tr>
+
                 {songs_objs}
             </table>
         </div>

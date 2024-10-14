@@ -1,16 +1,13 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, remote } = require('electron')
 const path = require('node:path')
 const fs = require('fs');
 const ytdl = require("@distube/ytdl-core");
-
-const DEFAULT_CONFIG = () =>{return {SP_ID : "", SP_SECRET : "", YT_KEY : ""}}
-const DEFAULT_PLAYLISTS = () => {return [];}
 
 const downloadAudio = ( url_id, name ) =>
 {
     return new Promise((resolve, reject) =>
         {
-            const output = `data/songs/${name}.wav`;
+            const output = path.join(app.getPath("music"), 'tunestash', `${name}.wav`);
             const url = `https://www.youtube.com/watch?v=${url_id}`;
             const stream = ytdl(url,
                 {
@@ -24,7 +21,6 @@ const downloadAudio = ( url_id, name ) =>
 
             fileStream.on('finish', () =>
                 {
-                    console.log('Download completed for:', name);
                     resolve();
                 }
             );
@@ -49,9 +45,12 @@ const downloadAudio = ( url_id, name ) =>
 const downloadPlaylistAudio = async ( songs ) =>
 {
     // check if song with name {song.id}.wav exists in data/songs already, if it doesn't call download_song.
+    const dirPath = path.join(app.getPath("music"), "tunestash");
+    await fs.promises.mkdir(dirPath, { recursive: true }); 
+    
     for (const song of songs)
     {
-        const filePath = `data/songs/${song.id}.wav`;
+        const filePath = path.join(app.getPath("music"), 'tunestash', `${song.id}.wav`);
         
         if (!fs.existsSync(filePath))
         {
@@ -71,14 +70,14 @@ const downloadPlaylistAudio = async ( songs ) =>
     }
 }
 
-const saveConfig = async (_event, config) =>
+const saveConfig = async (SP_ID, SP_SECRET, YT_KEY) =>
 {
     try
     {
-        const dirPath = path.join(__dirname, 'data');
+        const dirPath = app.getPath("userData");
         const filePath = path.join(dirPath, 'config.json');
         await fs.promises.mkdir(dirPath, { recursive: true }); // create data folder if doesn't exist
-        const data = JSON.stringify(config, null, 2); // Pretty print the JSON
+        const data = JSON.stringify({SP_ID, SP_SECRET, YT_KEY}, null, 2); // Pretty print the JSON
         await fs.promises.writeFile(filePath, data, 'utf-8');
     }
     catch (error)
@@ -92,16 +91,15 @@ const loadConfig = async () =>
 {
     try
     {
-        const filePath = path.join(__dirname, 'data', 'config.json');
+        const filePath = path.join(app.getPath("userData"), 'config.json');
         const data = await fs.promises.readFile(filePath, 'utf-8');
         return data;
     }
     catch (error)
     {
         console.error("Error loading config, creating replacement.")
-        const config = DEFAULT_CONFIG();
-        saveConfig("", config);
-        return JSON.stringify(config);
+        await saveConfig("", "", "");
+        return await loadConfig();
     }
 }
 
@@ -128,14 +126,13 @@ const createPlaylist = async (_event, data) =>
     const playlist = JSON.parse(data);
     await savePlaylistToFS(playlist);
     await downloadPlaylistAudio(playlist.songs);
-    console.log("playlisted downloaded")
 }
 
 const saveAllPlaylistsToFS = async (_event, playlists) =>
 {
     try
     {
-        const dirPath = path.join(__dirname, 'data');
+        const dirPath = app.getPath("userData");
         const filePath = path.join(dirPath, 'playlists.json');
         await fs.promises.mkdir(dirPath, { recursive: true }); // create data folder if doesn't exist
         const data = JSON.stringify(playlists, null, 2); // Pretty print the JSON
@@ -152,7 +149,7 @@ const loadPlaylistsFromFS = async () =>
 {
     try
     {
-        const filePath = path.join(__dirname, 'data', 'playlists.json');
+        const filePath = path.join(app.getPath("userData"), 'playlists.json');
         const data = await fs.promises.readFile(filePath, 'utf-8');
         return data;
     }
@@ -160,9 +157,8 @@ const loadPlaylistsFromFS = async () =>
     {
         console.log(error);
         console.log('creating playlists');
-        const playlists = DEFAULT_PLAYLISTS();
-        saveAllPlaylistsToFS("", playlists);
-        return JSON.stringify(playlists);
+        saveAllPlaylistsToFS("", []);
+        return JSON.stringify([]);
     }
 }
 
@@ -171,7 +167,7 @@ const loadSongDataFromFS = async (_event, songId) =>
 {
     try
     {
-        const filePath = path.join(__dirname, 'data', 'songs', `${songId}.wav`);
+        const filePath = path.join(app.getPath("music"), 'tunestash', `${songId}.wav`);
         const fileBuffer = await fs.promises.readFile(filePath);
         const base64Data = fileBuffer.toString('base64');
         return base64Data;
@@ -186,11 +182,11 @@ const loadSongDataFromFS = async (_event, songId) =>
 const createWindow = () =>
 {
     const mainWindow = new BrowserWindow({
-        width: 1000,
+        width: 1100,
         height: 785,
         autoHideMenuBar: true,
-        resizable: false,
-        fullscreenable: false,
+        // resizable: false,
+        // fullscreenable: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js')
         }
@@ -212,11 +208,32 @@ const createWindow = () =>
         }
     }
 
+    const reload_config = async () =>
+    {
+        try
+        {
+            const config = await loadConfig();
+            mainWindow.webContents.send("update-config", config);
+        }
+        catch (error)
+        {
+            console.error(error);
+            return;
+        }
+    }
+
     mainWindow.webContents.on('did-finish-load', reload_playlists);
+    mainWindow.webContents.on('did-finish-load', reload_config);
 
     // mainWindow.webContents.openDevTools();
 
-    ipcMain.on("save-config", saveConfig);
+    ipcMain.on("save-config", async (_event, data) =>
+    {
+        const [ SP_ID, SP_SECRET, YT_KEY ] = JSON.parse(data);
+        await saveConfig(SP_ID, SP_SECRET, YT_KEY);
+        await reload_config();
+    });
+
     ipcMain.on("add-playlist", async (_event, data) =>
     {
         await createPlaylist(_event, data);
@@ -239,9 +256,6 @@ const createWindow = () =>
             }
         }
     );
-
-
-    // reload_playlists();
 }
 
 

@@ -11,10 +11,13 @@ interface PlaybarOptions
     song : TuneStashSong | undefined,
     songPlaylist : TuneStashPlaylist | undefined,
     setSongId : Function,
-    audio : HTMLAudioElement
+    audio : HTMLAudioElement,
+    shuffle : boolean,
+    setShuffle : React.Dispatch<React.SetStateAction<boolean>>,
+    setIsNext : React.Dispatch<React.SetStateAction<boolean>>
 }
 
-const Playbar : React.FC<PlaybarOptions> = ({ visible, song, audio, songPlaylist, setSongId }) =>
+const Playbar : React.FC<PlaybarOptions> = ({ visible, song, audio, songPlaylist, setSongId, shuffle, setShuffle, setIsNext }) =>
 {
     if (!visible || song == undefined)
     {
@@ -24,7 +27,7 @@ const Playbar : React.FC<PlaybarOptions> = ({ visible, song, audio, songPlaylist
     return (
         <div className="flex w-full h-[5rem] p-3 justify-between">
             <SongDisplay name={song.name} artist={song.artists.join(", ")} art={song.art} />
-            <SongBar audio={audio} songPlaylist={songPlaylist} song={song} setSongId={setSongId}  />
+            <SongBar audio={audio} songPlaylist={songPlaylist} song={song} setSongId={setSongId} setIsNext={setIsNext} shuffle={shuffle} setShuffle={setShuffle}  />
             <SongOptions audio={audio} />
         </div>
     )
