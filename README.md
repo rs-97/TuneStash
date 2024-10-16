@@ -1,3 +1,5 @@
+![Screenshot](screenshot.png)
+
 # TuneStash
 
 TuneStash is a desktop application that allows users to download YouTube and Spotify playlists for easy access and playback. This project is primarily a learning experience and is not intended for distribution.
